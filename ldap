@@ -5,7 +5,7 @@ ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x \
   -b '***REMOVED***' \
   "($1)" cn displayName memberOf member description mail\
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
-  | awk -F'( {2,}|,)' ' /^member(Of)?:/      { printf("%-30s     %-30s      full DN: %s\n", $1, $2, gensub("^member(Of)?: ", "", $0)); next };
+  | awk -F'( {2,}|,)' ' /^member(Of)?:/      { printf("%-35s     %-30s      full DN: %s\n", $1, $2, gensub("^member(Of)?: ", "", $0)); next };
           /^displayName::/ { "echo "$2" | base64 -d" | getline decoded; print $1 " " decoded;  next };
           { print };' \
   | sort
