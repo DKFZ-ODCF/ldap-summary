@@ -9,5 +9,3 @@ ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x \
           /^displayName::/ { "echo "$2" | base64 -d" | getline decoded; print $1 " " decoded;  next };
           { print };' \
   | sort
-
- #-e 's/,OU=***REMOVED***,***REMOVED***,***REMOVED***//g'\
