@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Username in which we are interested
+USER=$1
+
+# The recursive group search only works with a full DN, acquire full DN of this user
+USER_DN=$(
+  ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x -D ***REMOVED***  -b '***REMOVED***' \
+    cn=$USER \
+    dn \
+    | awk '/^dn:/ {print $2}')
+
+# The magic ldap-filter: _recursively_ finds all groups that have our DN as a 'member'
+# The magic number is the OID of microsoft-AD specific extension LDAP_MATCHING_RULE_IN_CHAIN
+# https://msdn.microsoft.com/en-us/library/aa746475(v=vs.85).aspx
+# https://ldapwiki.com/wiki/1.2.840.113556.1.4.1941
+FILTER="member:1.2.840.113556.1.4.1941:=$USER_DN";
+
+# query with our filter, and pretty-print with AWK
+ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x \
+  -D ***REMOVED*** \
+  -b '***REMOVED***' \
+  $FILTER \
+  dn \
+  | awk -F'( {2,}|,|:)' '/^dn:/ { printf("%-28s %-18s %s\n", $2, $3, $0); next };'
