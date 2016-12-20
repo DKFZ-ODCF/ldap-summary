@@ -8,6 +8,7 @@ USER_DN=$(
   ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x -D ***REMOVED***  -b '***REMOVED***' \
     cn=$USER \
     dn \
+    | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
     | awk '/^dn:/ {print $2}')
 
 # The magic ldap-filter: _recursively_ finds all groups that have our DN as a 'member'
@@ -22,4 +23,5 @@ ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x \
   -b '***REMOVED***' \
   $FILTER \
   dn \
+  | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
   | awk -F'( {2,}|,|:)' '/^dn:/ { printf("%-28s %-18s %s\n", $2, $3, $0); next };'
