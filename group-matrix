@@ -1,0 +1,133 @@
+#!/bin/bash
+
+USAGE="USAGE:   $0 AD_GROUP AD_GROUP [AD_GROUP...]
+
+Prints a matrix showing which members are in which group.
+The script outputs pretty-printed tables if the output is the terminal
+If the output goes to a file or pipe, a standard CSV format is emitted instead
+
+Example terminal output:
+
+# group-matrix group1 group2 group3
+USERS  group1  group2  group3
+user1  Y
+user2  Y       Y       Y
+user3  Y
+user4  Y       Y
+
+Example redirected output:
+# group-matrix group1 group2 group3 | cat
+USERS,group1,group2,group3
+user1,Y,,
+user2,Y,Y,Y
+user3,Y,,
+user4,Y,Y,
+"
+
+# check invocation
+if [ $# -lt 2 ]; then
+  echo "Not enough arguments! (expected two or more AD-groups)"
+  echo "$USAGE"
+  exit 1
+fi
+
+
+# Which groups to process?
+GRPS=$@
+
+
+# We will generate lots of temp-files.
+#   keep them all in one place for easy cleanup later
+TMPDIR=$(mktemp -d --suffix="-group-matrix-tmp")
+# column-separator in tmp-files
+SEPARATOR='#'
+
+
+# prints the usernames in a group to stdout
+ldapmembers() {
+  GRP=$1;
+  ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x  \
+           -D ***REMOVED***  \
+           -b '***REMOVED***' cn="$GRP" member  \
+       | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' \
+       | grep '^MEMBER:' \
+       | sed 's/^MEMBER://' \
+       | sort
+}
+
+
+# given a group-name, generates the (re-used) tmp-file path
+# for the file containing that group's members
+membertmp() {
+  echo "$TMPDIR/members-$1.txt"
+}
+
+
+
+
+# intermediate tracking: all users we've seen
+# needed for consistent sort-ordering later on
+ALL_USERS="$TMPDIR/all-users.txt"
+ALL_USERS_UNIQ="$ALL_USERS-uniq.txt"
+
+# obtain the users in each individual group
+for GRP in ${GRPS[*]}; do
+  GRP_MEMBERS=$(membertmp $GRP)
+
+  # Header
+  echo "names#$GRP" > $GRP_MEMBERS
+
+  # Get the group members.
+  #
+  # Output is stored twice
+  # 1) just the usernames in $ALL_USERS file
+  # 2) in the group-specific file, as "username<SEPARATOR>Y"
+  #     This will make for a more compact table after joining.
+  #     We join on column 1, but emit only column 2. This 'clever' join-ing
+  #     leaves only a "Y(es)" in each group-column if the user is a member
+  #     instead of repeating the full username
+  ldapmembers $GRP \
+    | sort \
+    | tee -a $ALL_USERS \
+    | sed -Ee "s/(.+)/\1${SEPARATOR}Y/" >> $GRP_MEMBERS
+done;
+
+# make the user index column
+# Header + all distinct usernames from all groups combined
+echo "USERS" > $ALL_USERS_UNIQ
+sort $ALL_USERS | uniq >> $ALL_USERS_UNIQ
+
+# "recursively" join all member-files to the user index column
+PREV="$ALL_USERS_UNIQ"
+for GRP in ${GRPS[*]}; do
+  # input and output for this iteration
+  CURRENT=$(membertmp $GRP)
+  INTERMEDIATE="$TMPDIR/jointmp-$GRP.txt"
+
+  # actual join
+  # NB: "-o auto -e' '" is REQUIRED to make the alignment work
+  #   otherwise, empty columns will be overlooked by the pretty-printing later
+  #   leading to incorrect results (displaying incorrect group memberships)
+  join \
+     --header \
+     -t"${SEPARATOR}" \
+     -j1 \
+     -a1 -a2 \
+     -o auto -e ' ' \
+     $PREV $CURRENT  >  $INTERMEDIATE
+
+  # advance iteration
+  PREV=$INTERMEDIATE
+done
+
+# print final output, dependant on terminal or pipe/file
+if [ -t 1 ]; then
+  # we're outputting to a terminal, pretty-print
+  column --separator "${SEPARATOR}" --table $PREV
+else
+  # we're outputting to a file or pipe, create CSV
+  column --separator "${SEPARATOR}" --table --output-separator ',' $PREV | sed -E 's/ +//g'
+fi
+
+# clean-up our tmp-files
+rm -rf $TMPDIR
