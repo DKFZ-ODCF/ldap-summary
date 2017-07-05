@@ -7,6 +7,16 @@ if [ "$#" -ne "2" ]; then
   exit -1;
 fi;
 
+ldapmembers() {
+  GROUP=$1;
+  ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x  \
+           -D ***REMOVED***  \
+           -b '***REMOVED***' cn="$GROUP" member  \
+       | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' \
+       | grep '^MEMBER:' \
+       | sed 's/^MEMBER://' \
+       | sort
+}
 
 (
   # Headers
@@ -15,13 +25,7 @@ fi;
   # actual queries:
   # joins two post-processed ldapsearch command outputs
   join -a1 -a2 -o 1.1,2.1 -t'|' -e'---' \
-    <( ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x  \
-           -D ***REMOVED***  \
-           -b '***REMOVED***' cn="$1" member  \
-       | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' | grep '^MEMBER:' | sed 's/^MEMBER://' | sort ) \
-    <( ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x  \
-           -D ***REMOVED***  \
-           -b '***REMOVED***' cn="$2" member  \
-       | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' | grep '^MEMBER:' | sed 's/^MEMBER://' | sort ) \
+    <( ldapmembers $1 ) \
+    <( ldapmembers $2 ) \
 # pretty-print column widths
 ) | column -t -s'|'
