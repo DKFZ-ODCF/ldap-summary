@@ -1,6 +1,6 @@
 #!/bin/bash
 
-USAGE="USAGE:   $0 AD_GROUP AD_GROUP [AD_GROUP...]
+USAGE="USAGE:   $0 AD_GROUP [AD_GROUP...]
 
 Prints a matrix showing which members are in which group.
 The script outputs pretty-printed tables if the output is the terminal
@@ -25,8 +25,8 @@ user4,Y,Y,
 "
 
 # check invocation
-if [ $# -lt 2 ]; then
-  echo "Not enough arguments! (expected two or more AD-groups)"
+if [ $# -lt 1 ]; then
+  echo "Not enough arguments! (expected one or more AD-groups)"
   echo "$USAGE"
   exit 1
 fi
