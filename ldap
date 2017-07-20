@@ -3,7 +3,7 @@
 ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x \
   -D ***REMOVED*** \
   -b '***REMOVED***' \
-  "($1)" cn displayName memberOf member description mail\
+  "($1)" cn displayName memberOf member description mail uidNumber gidNumber\
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
   | awk -F'( {2,}|,|:)' \
          '/^member(Of)?:/                { printf("%s:%-28s %-18s full DN: %s\n", $1, $2, $3, gensub("^member(Of)?: ", "", "g", $0)); next };
