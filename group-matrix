@@ -75,7 +75,7 @@ for GRP in ${GRPS[*]}; do
   GRP_MEMBERS=$(membertmp $GRP)
 
   # Header
-  echo "names#$GRP" > $GRP_MEMBERS
+  echo "names${SEPARATOR}${GRP}" > $GRP_MEMBERS
 
   # Get the group members.
   #
