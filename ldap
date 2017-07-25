@@ -8,4 +8,4 @@ ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x \
   | awk -F'( {2,}|,|:)' \
          '/^member(Of)?:/                { printf("%s:%-28s %-18s full DN: %s\n", $1, $2, $3, gensub("^member(Of)?: ", "", "g", $0)); next };
           /^(displayName|description)::/ { "echo "$3" | base64 -d" | getline decoded; print $1 ": " decoded;                     next };
-                                         { print };' \
+                                         { print };'
