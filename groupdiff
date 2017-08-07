@@ -7,15 +7,20 @@ if [ "$#" -ne "2" ]; then
   exit -1;
 fi;
 
+# Load the secrets such as password and hostname from somewhere not-in-git
+source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
+
 ldapmembers() {
   GROUP=$1;
-  ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x  \
-           -D ***REMOVED***  \
-           -b '***REMOVED***' cn="$GROUP" member  \
-       | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' \
-       | grep '^MEMBER:' \
-       | sed 's/^MEMBER://' \
-       | sort
+  ldapsearch -u -LLL \
+    -h $JK_LDAPHOST -w $JK_LDAPPASSWORD \
+    -D $JK_BINDDN -b $JK_SEARCHBASE \
+    -x \
+    cn="$GROUP" member  \
+  | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' \
+  | grep '^MEMBER:' \
+  | sed 's/^MEMBER://' \
+  | sort
 }
 
 (

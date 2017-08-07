@@ -32,6 +32,10 @@ if [ $# -lt 1 ]; then
 fi
 
 
+# Load the secrets such as password and hostname from somewhere not-in-git
+source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
+
+
 # Which groups to process?
 GRPS=$@
 
@@ -46,13 +50,15 @@ SEPARATOR='#'
 # prints the usernames in a group to stdout
 ldapmembers() {
   GRP=$1;
-  ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x  \
-           -D ***REMOVED***  \
-           -b '***REMOVED***' cn="$GRP" member  \
-       | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' \
-       | grep '^MEMBER:' \
-       | sed 's/^MEMBER://' \
-       | sort
+  ldapsearch -u -LLL \
+    -h $JK_LDAPHOST -w $JK_LDAPPASSWORD \
+    -D $JK_BINDDN -b $JK_SEARCHBASE \
+    -x \
+    cn="$GRP" member  \
+  | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' \
+  | grep '^MEMBER:' \
+  | sed 's/^MEMBER://' \
+  | sort
 }
 
 

@@ -3,13 +3,19 @@
 # Username in which we are interested
 USER=$1
 
+# Load the secrets such as password and hostname from somewhere not-in-git
+source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
+
 # The recursive group search only works with a full DN, acquire full DN of this user
 USER_DN=$(
-  ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x -D ***REMOVED***  -b '***REMOVED***' \
+  ldapsearch -u -LLL \
+    -h $JK_LDAPHOST -w $JK_LDAPPASSWORD \
+    -D $JK_BINDDN -b $JK_SEARCHBASE \
+    -x \
     cn=$USER \
     dn \
-    | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
-    | awk '/^dn:/ {print $2}')
+  | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
+  | awk '/^dn:/ {print $2}')
 
 # The magic ldap-filter: _recursively_ finds all groups that have our DN as a 'member'
 # The magic number is the OID of microsoft-AD specific extension LDAP_MATCHING_RULE_IN_CHAIN
@@ -17,11 +23,14 @@ USER_DN=$(
 # https://ldapwiki.com/wiki/1.2.840.113556.1.4.1941
 FILTER="member:1.2.840.113556.1.4.1941:=$USER_DN";
 
-# query with our filter, and pretty-print with AWK
-ldapsearch -uLLLh ***REMOVED*** -w ***REMOVED*** -x \
-  -D ***REMOVED*** \
-  -b '***REMOVED***' \
-  $FILTER \
-  dn \
+# query with our filter,
+# remove spurious 80column linebreaks with sed and
+# pretty-print with AWK
+  ldapsearch -u -LLL \
+    -h $JK_LDAPHOST -w $JK_LDAPPASSWORD \
+    -D $JK_BINDDN -b $JK_SEARCHBASE \
+    -x \
+    $FILTER \
+    dn \
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
   | awk -F'( {2,}|,|:)' '/^dn:/ { printf("%-28s %-18s %s\n", $2, $3, $0); next };'
