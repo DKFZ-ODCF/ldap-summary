@@ -1,15 +1,15 @@
-# Settings for ldap-summary scripts
-# These settings are used by the ldap-summary suite of tools by Jules Kerssemakers
-# It should be stored in "$XDG_CONFIG_HOME/ldap-summary.conf", which is usually "$HOME/.config/ldap-summary.conf"
+# Settings for ldap-summary scripts by Jules Kerssemakers
+# It stores the sensitive information of the authentication server, such as which username and password to use.
+# It should be stored in "$XDG_CONFIG_HOME/ldap-summary.conf", which is "$HOME/.config/ldap-summary.conf" by default.
 
 # The hostname or ip-address of the LDAP server
 JK_LDAPHOST='ad.example.org'
 
-# your organisations' password to query the LDAP
-JK_LDAPPASSWORD='passwords_should_be_better_than_this_example'
-
 # which user to identify/bind as when querying
 JK_BINDDN='CN=ldap,CN=Users,DC=ad,DC=example,DC=org'
+
+# your organisations' password to query the LDAP
+JK_LDAPPASSWORD='passwords_should_be_better_than_this_example'
 
 # at which part of the LDAP-tree to start searching
 JK_SEARCHBASE='DC=ad,DC=example,DC=org'
