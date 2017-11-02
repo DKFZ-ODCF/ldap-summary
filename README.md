@@ -3,6 +3,11 @@ This repository contains useful shell scripts to make interacting with LDAP/AD m
 The shell scripts provide easy access to the most common types of information that we've needed on users/groups at the DKFZ.
 They are made available here in the spirit of making every admin's life easier.
 
+# Configuration
+
+The scripts load their LDAP configuration from a separate config file: `ldap-summary.conf`, located in `$XDG_CONFIG_HOME` (by default: `$HOME/.config/`).
+An example config file is provided as `ldap-summary.conf.template`, which contains dummy values for all required settings.
+
 # Examples
 
 ## Basic LDAP info on a ...
