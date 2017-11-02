@@ -1,6 +1,6 @@
 This repository contains useful shell scripts to make interacting with LDAP/AD more pleasant.
 
-The shell scripts provide easy access to the most common types of information that we've needed on users/groups at the DKFZ.
+The shell scripts wrap around `ldapsearch` to provide easy access to the most common types of information that we've needed on users/groups at the DKFZ.
 They are made available here in the spirit of making every admin's life easier.
 
 # Configuration
