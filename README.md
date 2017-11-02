@@ -1,7 +1,10 @@
-This repository contains useful shell scripts to make interacting with LDAP/AD more pleasant.
+# LDAP-summary
 
-The shell scripts wrap around `ldapsearch` to provide easy access to the most common types of information that we've needed on users/groups at the DKFZ.
+This repository contains useful shell scripts to make interacting with LDAP/AD from the command line more pleasant.
+
+The shell scripts provide easy access to the most common types of information that we've needed on users/groups at the DKFZ.
 They are made available here in the spirit of making every admin's life easier.
+The scripts are wrappers around [`ldapsearch`](https://linux.die.net/man/1/ldapsearch) by the [OpenLDAP project](https://www.openldap.org/).
 
 # Configuration
 
