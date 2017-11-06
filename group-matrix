@@ -35,7 +35,7 @@ If the output goes to a file or pipe, a standard CSV format is emitted instead
 
 Example terminal output:
 
-# group-matrix group1 group2 group3
+# ./group-matrix group1 group2 group3
 USERS  group1  group2  group3
 user1  Y
 user2  Y       Y       Y
@@ -43,7 +43,7 @@ user3  Y
 user4  Y       Y
 
 Example redirected output:
-# group-matrix group1 group2 group3 | cat
+# ./group-matrix group1 group2 group3 | cat
 USERS,group1,group2,group3
 user1,Y,,
 user2,Y,Y,Y
