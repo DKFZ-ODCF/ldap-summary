@@ -60,7 +60,7 @@ samspade       samspade
 
 ## compare _multiple_ groups
 ```
-# group-matrix group1 group2 ...
+# group-matrix group1 group2 group3...
 USERS     group1  group2  group3
 troyhunt  Y
 samspade  Y       Y       Y
