@@ -26,6 +26,12 @@
 #####################################################################################
 
 
+# This script provides a simple wrapper around `ldapsearch`
+# You can just enter your filter query (e.g. 'cn=drwho'), and the script
+# will handle all the extra bind parameters that LDAP requires
+# (loaded from a config file)
+
+
 # Load the secrets such as password and hostname from somewhere not-in-git
 source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
 

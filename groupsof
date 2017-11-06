@@ -26,6 +26,14 @@
 #####################################################################################
 
 
+# This scripts checks AD/LDAP for ALL groups a given username is part of,
+# INCLUDING groups of which they are only an indirect member.
+# It does this by querying the AD-server using the special LDAP_MATCHING_RULE_IN_CHAIN
+# filter criterion, which instructs it to resolve groups recursively
+# (groups themselves can be a member of other groups, meaning their members are
+#  indirect members of the supergroup)
+
+
 # Username in which we are interested
 USER=$1
 

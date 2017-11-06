@@ -25,6 +25,7 @@
 #
 #####################################################################################
 
+# This script shows a membership matrix of all users in the queried groups
 
 USAGE="USAGE:   $0 AD_GROUP [AD_GROUP...]
 

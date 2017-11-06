@@ -27,6 +27,9 @@
 #####################################################################################
 
 
+# This script compares the members of two groups side-by-side
+
+
 if [ "$#" -ne "2" ]; then
   echo "usage: "
   echo "   groupdiff GROUP_LEFT GROUP_RIGHT"
