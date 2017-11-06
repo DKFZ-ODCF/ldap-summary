@@ -87,3 +87,8 @@ This finds all groups of a user, including those that they are only indirectly a
  CN=Team-Data-SecretProject  OU=Department      dn: CN=Team-Data-SecretProject,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
  CN=Team-viztools            OU=Team            dn: CN=Team-viztools,OU=Team,OU=Unit,DC=ad,DC=example,DC=com
 ```
+
+# License and contribution
+
+The scripts and example code in this project are licensed under the MIT license.
+Any contributions intentionally submitted to this project will be governed by that same license.
