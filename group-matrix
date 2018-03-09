@@ -167,7 +167,7 @@ if [ -t 1 ]; then
   column --separator "${SEPARATOR}" --table $PREV
 else
   # we're outputting to a file or pipe, create CSV
-  column --separator "${SEPARATOR}" --table --output-separator ',' $PREV | sed -E 's/ +//g'
+  sed -E -e "s/${SEPARATOR}/,/g" -e 's/ +//g' $PREV
 fi
 
 # clean-up our tmp-files
