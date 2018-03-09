@@ -49,6 +49,9 @@ user1,Y,,
 user2,Y,Y,Y
 user3,Y,,
 user4,Y,Y,
+
+Please note that input groups are sorted and de-duplicated, so output column order
+will not necessarily match the order specified on the command line.
 "
 
 # check invocation
@@ -64,7 +67,12 @@ source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
 
 
 # Which groups to process?
-GRPS=$@
+# First: sort and deduplicate the groups. This is necessary, because processing a group multiple times
+# would lead to re-use of the groups' previous tempfile further down, thus resetting progress and losing results.
+# thank you StackOverflow for the deduplication logic:
+#   https://stackoverflow.com/questions/13648410/how-can-i-get-unique-values-from-an-array-in-bash
+# specifically this answer: https://stackoverflow.com/a/13648438/2964696
+GRPS=($(echo "$@" | tr ' ' '\n' | sort -u | tr '\n' ' '))
 
 
 # We will generate lots of temp-files.
