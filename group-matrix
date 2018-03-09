@@ -128,7 +128,7 @@ done;
 # make the user index column
 # Header + all distinct usernames from all groups combined
 echo "USERS" > $ALL_USERS_UNIQ
-sort $ALL_USERS | uniq >> $ALL_USERS_UNIQ
+sort -u $ALL_USERS >> $ALL_USERS_UNIQ
 
 # "recursively" join all member-files to the user index column
 PREV="$ALL_USERS_UNIQ"
