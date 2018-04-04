@@ -45,6 +45,15 @@ ldapsearch -u -LLL \
   "($1)" cn displayName memberOf member description mail uidNumber gidNumber \
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
   | awk -F'( {2,}|,|:)' \
-         '/^member(Of)?:/                { printf("%s:%-28s %-18s full DN: %s\n", $1, $2, $3, gensub("^member(Of)?: ", "", "g", $0)); next };
-          /^(displayName|description)::/ { "echo "$3" | base64 -d" | getline decoded; print $1 ": " decoded;                     next };
-                                         { print };'
+    'function base_64_decode(encoded) {
+       "echo "encoded" | base64 -d" | getline decoded
+       return decoded
+    }
+    function print_formatted_membership(membership_type, cn, ou, whole_line) {
+        printf("%-8s:%-28s %-18s full DN: %s\n",
+              membership_type, cn, ou,
+              gensub("^member(Of)?: ", "", "g", whole_line));
+    }
+    /^member(Of)?:/                { print_formatted_membership($1, $2, $3, $0); next };
+    /^(displayName|description)::/ { print $1 ": " base_64_decode($3);           next };
+                                   { print };'
