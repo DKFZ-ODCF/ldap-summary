@@ -86,8 +86,8 @@ SEPARATOR='#'
 ldapmembers() {
   GRP=$1;
   ldapsearch -u -LLL \
-    -h $JK_LDAPHOST -w $JK_LDAPPASSWORD \
-    -D $JK_BINDDN -b $JK_SEARCHBASE \
+    -h "$JK_LDAPHOST" -w "$JK_LDAPPASSWORD" \
+    -D "$JK_BINDDN" -b "$JK_SEARCHBASE" \
     -x \
     cn="$GRP" member  \
   | sed -r -e 's/\r?\n //g' -e 's/^member: CN=(\w+?),.+$/MEMBER:\1/' \
@@ -116,7 +116,7 @@ for GRP in ${GRPS[*]}; do
   GRP_MEMBERS=$(membertmp $GRP)
 
   # Header
-  echo "names${SEPARATOR}${GRP}" > $GRP_MEMBERS
+  echo "names${SEPARATOR}${GRP}" > "$GRP_MEMBERS"
 
   # Get the group members.
   #
@@ -129,14 +129,14 @@ for GRP in ${GRPS[*]}; do
   #     instead of repeating the full username
   ldapmembers $GRP \
     | sort \
-    | tee -a $ALL_USERS \
-    | sed -Ee "s/(.+)/\1${SEPARATOR}Y/" >> $GRP_MEMBERS
+    | tee -a "$ALL_USERS" \
+    | sed -Ee "s/(.+)/\1${SEPARATOR}Y/" >> "$GRP_MEMBERS"
 done;
 
 # make the user index column
 # Header + all distinct usernames from all groups combined
-echo "USERS" > $ALL_USERS_UNIQ
-sort -u $ALL_USERS >> $ALL_USERS_UNIQ
+echo "USERS" > "$ALL_USERS_UNIQ"
+sort -u "$ALL_USERS" >> "$ALL_USERS_UNIQ"
 
 # "recursively" join all member-files to the user index column
 PREV="$ALL_USERS_UNIQ"
@@ -155,20 +155,20 @@ for GRP in ${GRPS[*]}; do
      -j1 \
      -a1 -a2 \
      -o auto -e ' ' \
-     $PREV $CURRENT  >  $INTERMEDIATE
+     "$PREV" "$CURRENT"  >  "$INTERMEDIATE"
 
   # advance iteration
-  PREV=$INTERMEDIATE
+  PREV="$INTERMEDIATE"
 done
 
 # print final output, dependant on terminal or pipe/file
 if [ -t 1 ]; then
   # we're outputting to a terminal, pretty-print
-  column --separator "${SEPARATOR}" --table $PREV
+  column --separator "${SEPARATOR}" --table "$PREV"
 else
   # we're outputting to a file or pipe, create CSV
-  sed -E -e "s/${SEPARATOR}/,/g" -e 's/ +//g' $PREV
+  sed -E -e "s/${SEPARATOR}/,/g" -e 's/ +//g' "$PREV"
 fi
 
 # clean-up our tmp-files
-rm -rf $TMPDIR
+rm -rf "$TMPDIR"

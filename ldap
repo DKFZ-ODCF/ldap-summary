@@ -39,8 +39,8 @@ source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
 # followed by sed one-liner that rejoins lines broken by the ldap 80-char line limit
 # followed by awk to do some layout and base64 decoding
 ldapsearch -u -LLL \
-  -h $JK_LDAPHOST -w $JK_LDAPPASSWORD \
-  -D $JK_BINDDN -b $JK_SEARCHBASE \
+  -h "$JK_LDAPHOST" -w "$JK_LDAPPASSWORD" \
+  -D "$JK_BINDDN" -b "$JK_SEARCHBASE" \
   -x \
   "($1)" cn displayName memberOf member description mail uidNumber gidNumber pwdLastSet lastLogonTimestamp accountExpires\
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
@@ -63,7 +63,7 @@ ldapsearch -u -LLL \
     }
     /^member(Of)?:/                { print_formatted_membership($1, $2, $3, $0); next };
     /^(displayName|description)::/ { print $1 ": " base_64_decode($3);           next };
-    /^(lastLogonTimestamp|pwdLastSet|accountExpires)/ \
-                                   { print $1 ": " parse_ldap_timestamp($2);     next };
+    /^(lastLogonTimestamp|pwdLastSet|accountExpires)/ {
+                                     print $1 ": " parse_ldap_timestamp($2);     next };
                                    { print };
     '
