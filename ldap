@@ -42,7 +42,7 @@ ldapsearch -u -LLL \
   -h $JK_LDAPHOST -w $JK_LDAPPASSWORD \
   -D $JK_BINDDN -b $JK_SEARCHBASE \
   -x \
-  "($1)" cn displayName memberOf member description mail uidNumber gidNumber \
+  "($1)" cn displayName memberOf member description mail uidNumber gidNumber pwdLastSet lastLogonTimestamp accountExpires\
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
   | awk -F'( {2,}|,|:)' \
     'function base_64_decode(encoded) {
@@ -63,4 +63,6 @@ ldapsearch -u -LLL \
     }
     /^member(Of)?:/                { print_formatted_membership($1, $2, $3, $0); next };
     /^(displayName|description)::/ { print $1 ": " base_64_decode($3);           next };
+    /^(lastLogonTimestamp|pwdLastSet|accountExpires)/ \
+                                   { print $1 ": " parse_ldap_timestamp($2);     next };
                                    { print };'
