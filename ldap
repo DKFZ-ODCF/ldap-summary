@@ -44,8 +44,8 @@ ldapsearch -u -LLL \
   -x \
   "($1)" cn displayName memberOf member description mail uidNumber gidNumber pwdLastSet lastLogonTimestamp accountExpires\
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
-  | awk -F'( {2,}|,|:)' \
-    'function base_64_decode(encoded) {
+  | awk -F'( {2,}|,|:)' -- '
+    function base_64_decode(encoded) {
        "echo "encoded" | base64 -d" | getline decoded
        return decoded
     }
@@ -65,4 +65,5 @@ ldapsearch -u -LLL \
     /^(displayName|description)::/ { print $1 ": " base_64_decode($3);           next };
     /^(lastLogonTimestamp|pwdLastSet|accountExpires)/ \
                                    { print $1 ": " parse_ldap_timestamp($2);     next };
-                                   { print };'
+                                   { print };
+    '
