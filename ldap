@@ -54,6 +54,13 @@ ldapsearch -u -LLL \
               membership_type, cn, ou,
               gensub("^member(Of)?: ", "", "g", whole_line));
     }
+    function parse_ldap_timestamp(ldap_timestamp) {
+        if (ldap_timestamp == 0) { return "N/A" }
+        # port of https://stackoverflow.com/questions/4647169/how-to-convert-ldap-timestamp-to-unix-timestamp
+        win_secs = int(ldap_timestamp / 10000000) # divide by 10 000 000 to get seconds from 100-nanosecond resolution
+        unix_timestamp = win_secs - 11644473600   # 1.1.1600 (win epoch) -> 1.1.1970 (linux epoch) difference in seconds
+        return strftime("%F %T", unix_timestamp)
+    }
     /^member(Of)?:/                { print_formatted_membership($1, $2, $3, $0); next };
     /^(displayName|description)::/ { print $1 ": " base_64_decode($3);           next };
                                    { print };'
