@@ -49,7 +49,7 @@ USER_DN=$(
     cn="$USER" \
     dn \
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
-  | awk '/^dn:/ {print $2}')
+  | awk --posix '/^dn:/ {print $2}')
 
 # The magic ldap-filter: _recursively_ finds all groups that have our DN as a 'member'
 # The magic number is the OID of microsoft-AD specific extension LDAP_MATCHING_RULE_IN_CHAIN
@@ -67,4 +67,4 @@ FILTER="member:1.2.840.113556.1.4.1941:=$USER_DN";
     "$FILTER" \
     dn \
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
-  | awk -F'( {2,}|,|:)' '/^dn:/ { printf("%-28s %-18s %s\n", $2, $3, $0); next };'
+  | awk --posix -F'( {2,}|,|:)' '/^dn:/ { printf("%-28s %-18s %s\n", $2, $3, $0); next };'

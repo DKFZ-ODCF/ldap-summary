@@ -44,7 +44,7 @@ ldapsearch -u -LLL \
   -x \
   "($1)" cn displayName memberOf member description mail uidNumber gidNumber pwdLastSet lastLogonTimestamp accountExpires\
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
-  | awk -F'( {2,}|,|:)' -- '
+  | awk --posix -F'( {2,}|,|:)' -- '
     function base_64_decode(encoded) {
        "echo "encoded" | base64 -d" | getline decoded
        return decoded
@@ -52,14 +52,17 @@ ldapsearch -u -LLL \
     function print_formatted_membership(membership_type, cn, ou, whole_line) {
         printf("%-8s:%-28s %-18s full DN: %s\n",
               membership_type, cn, ou,
-              gensub("^member(Of)?: ", "", "g", whole_line));
+              gsub("^member(Of)?: ", "", whole_line));
     }
     function parse_ldap_timestamp(ldap_timestamp) {
         if (ldap_timestamp == 0) { return "N/A" }
         # port of https://stackoverflow.com/questions/4647169/how-to-convert-ldap-timestamp-to-unix-timestamp
         win_secs = int(ldap_timestamp / 10000000) # divide by 10 000 000 to get seconds from 100-nanosecond resolution
         unix_timestamp = win_secs - 11644473600   # 1.1.1600 (win epoch) -> 1.1.1970 (linux epoch) difference in seconds
-        return strftime("%F %T", unix_timestamp)
+        # posix compatibility: use system `date` utility instead of gawk-only strftime;
+        # \047 = escape code for single-quote, to not interrupt top-level bash-quoting
+        "date \047+%Y-%m-%d %H:%M:%S\047 --date=@" unix_timestamp | getline formatted_date
+        return formatted_date;
     }
     /^member(Of)?:/                { print_formatted_membership($1, $2, $3, $0); next };
     /^(displayName|description)::/ { print $1 ": " base_64_decode($3);           next };
