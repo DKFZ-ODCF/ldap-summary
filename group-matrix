@@ -66,13 +66,17 @@ fi
 source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
 
 
+function unique() {
+	echo "$@" | tr ' ' '\n' | sort -u | tr '\n' ' '
+}
+
 # Which groups to process?
 # First: sort and deduplicate the groups. This is necessary, because processing a group multiple times
 # would lead to re-use of the groups' previous tempfile further down, thus resetting progress and losing results.
 # thank you StackOverflow for the deduplication logic:
 #   https://stackoverflow.com/questions/13648410/how-can-i-get-unique-values-from-an-array-in-bash
 # specifically this answer: https://stackoverflow.com/a/13648438/2964696
-GRPS=($(echo "$@" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+GRPS=($( unique "$@") )
 
 
 # We will generate lots of temp-files.
@@ -108,15 +112,14 @@ membertmp() {
 
 # intermediate tracking: all users we've seen
 # needed for consistent sort-ordering later on
-ALL_USERS="$TMPDIR/all-users.txt"
-ALL_USERS_UNIQ="$ALL_USERS-uniq.txt"
+declare -a ALL_USERS
 
 # obtain the users in each individual group
 for GRP in ${GRPS[*]}; do
   GRP_MEMBERS=$(membertmp $GRP)
 
   # Header
-  echo "names${SEPARATOR}${GRP}" > "$GRP_MEMBERS"
+  echo "USERS${SEPARATOR}${GRP}" > "$GRP_MEMBERS"
 
   # Get the group members.
   #
@@ -127,16 +130,16 @@ for GRP in ${GRPS[*]}; do
   #     We join on column 1, but emit only column 2. This 'clever' join-ing
   #     leaves only a "Y(es)" in each group-column if the user is a member
   #     instead of repeating the full username
-  ldapmembers $GRP \
-    | sort \
-    | tee -a "$ALL_USERS" \
-    | sed -Ee "s/(.+)/\1${SEPARATOR}Y/" >> "$GRP_MEMBERS"
+  members=( $(ldapmembers $GRP | sort ) )
+
+  ALL_USERS=( "${ALL_USERS[*]}" "${members[*]}" )
+  for U in ${members[*]}; do
+    echo "${U}${SEPARATOR}Y" >> "$GRP_MEMBERS"
+  done
 done;
 
-# make the user index column
-# all distinct usernames from all groups combined
-sort -u "$ALL_USERS" >> "$ALL_USERS_UNIQ"
-
+# all _distinct_ usernames from all groups combined
+ALL_USERS=( $(unique "${ALL_USERS[*]}") )
 
 
 # see which users are expired
@@ -148,22 +151,22 @@ sort -u "$ALL_USERS" >> "$ALL_USERS_UNIQ"
 AD_NOW=$(( ($(date '+%s') + 11644473600 ) * 10000000 ))
 ALL_USERS_UNIQ_WITH_STATUS="$TMPDIR/user-status.txt"
 echo "USERS${SEPARATOR}STATUS" > "$ALL_USERS_UNIQ_WITH_STATUS" # header
-while read USER; do
+for U in ${ALL_USERS[*]}; do
   expire_time=$(ldapsearch -u -LLL \
       -h "$JK_LDAPHOST" -w "$JK_LDAPPASSWORD" \
       -D "$JK_BINDDN" -b "$JK_SEARCHBASE" \
       -x \
-      cn="$USER" accountExpires  \
+      cn="$U" accountExpires  \
     | sed -r -e 's/\r?\n //g' \
     | grep '^accountExpires:' \
     | sed 's/accountExpires: //'
   )
   if [ "$expire_time" -lt "$AD_NOW" ]; then
-    echo "${USER}${SEPARATOR}EXPIRED" >> "$ALL_USERS_UNIQ_WITH_STATUS"
+    echo "${U}${SEPARATOR}EXPIRED" >> "$ALL_USERS_UNIQ_WITH_STATUS"
   else
-    echo "${USER}${SEPARATOR}active" >> "$ALL_USERS_UNIQ_WITH_STATUS"
+    echo "${U}${SEPARATOR}active" >> "$ALL_USERS_UNIQ_WITH_STATUS"
   fi
-done < "$ALL_USERS_UNIQ"
+done
 
 
 
