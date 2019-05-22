@@ -27,28 +27,29 @@
 
 # This script shows a membership matrix of all users in the queried groups
 
-USAGE="USAGE:   $0 AD_GROUP [AD_GROUP...]
+USAGE="
+USAGE:   $0 AD_GROUP [AD_GROUP...]
 
-Prints a matrix showing which members are in which group.
+Prints a matrix showing which members are in which group, and if those accounts are expired or not.
+
 The script outputs pretty-printed tables if the output is the terminal
 If the output goes to a file or pipe, a standard CSV format is emitted instead
 
 Example terminal output:
-
 # ./group-matrix group1 group2 group3
-USERS  group1  group2  group3
-user1  Y
-user2  Y       Y       Y
-user3  Y
-user4  Y       Y
+USERS  STATUS  group1  group2  group3
+user1  active  Y
+user2  EXPIRED Y       Y       Y
+user3  active  Y
+user4  active  Y       Y
 
 Example redirected output:
 # ./group-matrix group1 group2 group3 | cat
-USERS,group1,group2,group3
-user1,Y,,
-user2,Y,Y,Y
-user3,Y,,
-user4,Y,Y,
+USERS,STATUS,group1,group2,group3
+user1,active,Y,,
+user2,EXPIRED,Y,Y,Y
+user3,active,Y,,
+user4,active,Y,Y,
 
 Please note that input groups are sorted and de-duplicated, so output column order
 will not necessarily match the order specified on the command line.
@@ -66,26 +67,19 @@ fi
 source "${XDG_CONFIG_HOME:-"$HOME"/.config}/ldap-summary.conf"
 
 
+###################################################################################
+# Function definitions
+
+###
+# unique-ifies the bash array of its input (`uniq` built-in only does lines of files)
+# Thank you StackOverflow for the deduplication logic:
+#   https://stackoverflow.com/questions/13648410/how-can-i-get-unique-values-from-an-array-in-bash
+#   specifically this answer: https://stackoverflow.com/a/13648438/2964696
 function unique() {
 	echo "$@" | tr ' ' '\n' | sort -u | tr '\n' ' '
 }
 
-# Which groups to process?
-# First: sort and deduplicate the groups. This is necessary, because processing a group multiple times
-# would lead to re-use of the groups' previous tempfile further down, thus resetting progress and losing results.
-# thank you StackOverflow for the deduplication logic:
-#   https://stackoverflow.com/questions/13648410/how-can-i-get-unique-values-from-an-array-in-bash
-# specifically this answer: https://stackoverflow.com/a/13648438/2964696
-GRPS=($( unique "$@") )
-
-
-# We will generate lots of temp-files.
-#   keep them all in one place for easy cleanup later
-TMPDIR=$(mktemp -d --suffix="-group-matrix-tmp")
-# column-separator in tmp-files
-SEPARATOR='#'
-
-
+###
 # prints the usernames in a group to stdout
 ldapmembers() {
   GRP=$1;
@@ -100,48 +94,60 @@ ldapmembers() {
   | sort
 }
 
-
+###
 # given a group-name, generates the (re-used) tmp-file path
 # for the file containing that group's members
 membertmp() {
   echo "$TMPDIR/members-$1.txt"
 }
 
+###################################################################################
 
 
+
+# We will generate lots of temp-files. keep them all in one place for easy cleanup later
+TMPDIR=$(mktemp -d --suffix="-group-matrix-tmp")
+# column-separator in tmp-files
+SEPARATOR='#'
+
+
+###################################################################################
+# Which groups to process?
+# First: sort and deduplicate the groups. This is necessary, because processing
+# a group multiple times leads to re-use of the groups' old tempfile, which resets
+# the progress to a previous state, thus losing results.
+GRPS=($( unique "$@") )
+
+
+###################################################################################
+# obtain the users in each individual group
 
 # intermediate tracking: all users we've seen
 # needed for consistent sort-ordering later on
 declare -a ALL_USERS
 
-# obtain the users in each individual group
 for GRP in ${GRPS[*]}; do
   GRP_MEMBERS=$(membertmp $GRP)
 
   # Header
   echo "USERS${SEPARATOR}${GRP}" > "$GRP_MEMBERS"
 
-  # Get the group members.
-  #
-  # Output is stored twice
-  # 1) just the usernames in $ALL_USERS file
-  # 2) in the group-specific file, as "username<SEPARATOR>Y"
-  #     This will make for a more compact table after joining.
-  #     We join on column 1, but emit only column 2. This 'clever' join-ing
-  #     leaves only a "Y(es)" in each group-column if the user is a member
-  #     instead of repeating the full username
   members=( $(ldapmembers $GRP | sort ) )
 
-  ALL_USERS=( "${ALL_USERS[*]}" "${members[*]}" )
+  ALL_USERS=( "${ALL_USERS[*]}" "${members[*]}" ) # creates a lot of redundancy, do a batch `unique` below
+
+  # create a group-specific file: "username<SEPARATOR>Y"
+  #   This will make for a more compact table after joining.
   for U in ${members[*]}; do
     echo "${U}${SEPARATOR}Y" >> "$GRP_MEMBERS"
   done
 done;
 
-# all _distinct_ usernames from all groups combined
+# batch `unique`: _distinct_ usernames only
 ALL_USERS=( $(unique "${ALL_USERS[*]}") )
 
 
+###################################################################################
 # see which users are expired
 
 # current time, in LDAP timestamp format.
@@ -149,6 +155,7 @@ ALL_USERS=( $(unique "${ALL_USERS[*]}") )
 #   11644473600 = 1.1.1600 (windows epoch) -> 1.1.1970 (linux epoch) difference in seconds
 #   10 000 000  = factor for (windows) 100-nanosecond resolution from (linux) seconds
 AD_NOW=$(( ($(date '+%s') + 11644473600 ) * 10000000 ))
+
 ALL_USERS_UNIQ_WITH_STATUS="$TMPDIR/user-status.txt"
 echo "USERS${SEPARATOR}STATUS" > "$ALL_USERS_UNIQ_WITH_STATUS" # header
 for U in ${ALL_USERS[*]}; do
@@ -161,6 +168,7 @@ for U in ${ALL_USERS[*]}; do
     | grep '^accountExpires:' \
     | sed 's/accountExpires: //'
   )
+
   if [ "$expire_time" -lt "$AD_NOW" ]; then
     echo "${U}${SEPARATOR}EXPIRED" >> "$ALL_USERS_UNIQ_WITH_STATUS"
   else
@@ -169,15 +177,18 @@ for U in ${ALL_USERS[*]}; do
 done
 
 
-
+###################################################################################
 # "recursively" join all member-files to the user index column
-PREV="$ALL_USERS_UNIQ_WITH_STATUS"
+
+PREV="$ALL_USERS_UNIQ_WITH_STATUS" # seed with our username/expired-status table
 for GRP in ${GRPS[*]}; do
   # input and output for this iteration
   CURRENT=$(membertmp $GRP)
   INTERMEDIATE="$TMPDIR/jointmp-$GRP.txt"
 
   # actual join
+  # We will join the different groups on their respective columns 1 (usernames), but emit only column 2 ('Y').
+  #   This 'clever' join-ing leaves only a "Y(es)" in each group-column if the user is a member
   # NB: "-o auto -e' '" is REQUIRED to make the alignment work
   #   otherwise, empty columns will be overlooked by the pretty-printing later
   #   leading to incorrect results (displaying incorrect group memberships)
@@ -194,7 +205,7 @@ for GRP in ${GRPS[*]}; do
 done
 
 
-
+###################################################################################
 # print final output, dependant on terminal or pipe/file
 if [ -t 1 ]; then
   # we're outputting to a terminal, pretty-print
@@ -203,6 +214,7 @@ else
   # we're outputting to a file or pipe, create CSV
   sed -E -e "s/${SEPARATOR}/,/g" -e 's/ +//g' "$PREV"
 fi
+
 
 # clean-up our tmp-files
 rm -rf "$TMPDIR"
