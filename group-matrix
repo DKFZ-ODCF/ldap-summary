@@ -134,12 +134,41 @@ for GRP in ${GRPS[*]}; do
 done;
 
 # make the user index column
-# Header + all distinct usernames from all groups combined
-echo "USERS" > "$ALL_USERS_UNIQ"
+# all distinct usernames from all groups combined
 sort -u "$ALL_USERS" >> "$ALL_USERS_UNIQ"
 
+
+
+# see which users are expired
+
+# current time, in LDAP timestamp format.
+# magic numbers:
+#   11644473600 = 1.1.1600 (windows epoch) -> 1.1.1970 (linux epoch) difference in seconds
+#   10 000 000  = factor for (windows) 100-nanosecond resolution from (linux) seconds
+AD_NOW=$(( ($(date '+%s') + 11644473600 ) * 10000000 ))
+ALL_USERS_UNIQ_WITH_STATUS="$TMPDIR/user-status.txt"
+echo "USERS${SEPARATOR}STATUS" > "$ALL_USERS_UNIQ_WITH_STATUS" # header
+while read USER; do
+  expire_time=$(ldapsearch -u -LLL \
+      -h "$JK_LDAPHOST" -w "$JK_LDAPPASSWORD" \
+      -D "$JK_BINDDN" -b "$JK_SEARCHBASE" \
+      -x \
+      cn="$USER" accountExpires  \
+    | sed -r -e 's/\r?\n //g' \
+    | grep '^accountExpires:' \
+    | sed 's/accountExpires: //'
+  )
+  if [ "$expire_time" -lt "$AD_NOW" ]; then
+    echo "${USER}${SEPARATOR}EXPIRED" >> "$ALL_USERS_UNIQ_WITH_STATUS"
+  else
+    echo "${USER}${SEPARATOR}active" >> "$ALL_USERS_UNIQ_WITH_STATUS"
+  fi
+done < "$ALL_USERS_UNIQ"
+
+
+
 # "recursively" join all member-files to the user index column
-PREV="$ALL_USERS_UNIQ"
+PREV="$ALL_USERS_UNIQ_WITH_STATUS"
 for GRP in ${GRPS[*]}; do
   # input and output for this iteration
   CURRENT=$(membertmp $GRP)
@@ -160,6 +189,8 @@ for GRP in ${GRPS[*]}; do
   # advance iteration
   PREV="$INTERMEDIATE"
 done
+
+
 
 # print final output, dependant on terminal or pipe/file
 if [ -t 1 ]; then
