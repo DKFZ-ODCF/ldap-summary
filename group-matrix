@@ -201,7 +201,7 @@ for GRP in ${GRPS[*]}; do
   # actual join
   # We will join the different groups on their respective columns 1 (usernames), but emit only column 2 ('Y').
   #   This 'clever' join-ing leaves only a "Y(es)" in each group-column if the user is a member
-  # NB: "-o auto -e' '" is REQUIRED to make the alignment work
+  # NB: `-o auto -e' '` is REQUIRED to make the alignment work
   #   otherwise, empty columns will be overlooked by the pretty-printing later
   #   leading to incorrect results (displaying incorrect group memberships)
   join \
@@ -223,8 +223,19 @@ if [ -t 1 ]; then
   # we're outputting to a terminal, pretty-print
   column --separator "${SEPARATOR}" --table "$PREV"
 else
-  # we're outputting to a file or pipe, create CSV
-  sed -E -e "s/${SEPARATOR}/,/g" -e 's/ +//g' "$PREV"
+  # we're outputting to a file or pipe, create a (properly quoted) CSV
+  awk --posix --field-separator "${SEPARATOR}" --source='
+    BEGIN { OFS=","; } # output separator = CSV-comma
+    {
+      # apply CSV quoting according to W3C spec/RFC4180:
+      # GOTCHA: assigning to $2 recomputes $0, sneakily triggering the separator conversion
+      gsub("\"", "\"\"", $2)  # double-quotes inside field are escaped by doubling them
+      $2 = "\"" $2 "\"";      # entire field surrounded by double-quotes
+
+      print $0;
+    }' \
+    "$PREV"
+#  sed -E -e "s/${SEPARATOR}/,/g" "$PREV"
 fi
 
 
