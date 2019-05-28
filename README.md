@@ -14,12 +14,14 @@ An example config file is provided as `ldap-summary.conf.template`, which contai
 # Examples
 
 ## Basic LDAP info on a ...
+
 ### .. user
+
 ```
-# ./ldap CN=johndoe
-cn: johndoe
-displayName: Doe, John
-dn: CN=johndoe,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
+# ./ldap CN=jdoe
+cn: jdoe
+displayName: Doe, Jessie
+dn: CN=jdoe,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
 mail: j.doe@example.com
 memberOf: CN=Powerusers               OU=Department      full DN: CN=Powerusers,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
 memberOf: CN=SomeProject              OU=Department      full DN: CN=SomeProject,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
@@ -28,9 +30,12 @@ memberOf: CN=SCP_project              OU=Department      full DN: CN=SCP_project
 ...
 memberOf: CN=storage-access           OU=Department      full DN: CN=storage-access,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
 memberOf: CN=UserWithParking          OU=Company         full DN: CN=UserWithParking,OU=Company,DC=ad,DC=example,DC=com
-ufn: johndoe, Department, Unit, Company, ad.example.com
+ufn: jessiedoe, Department, Unit, Company, ad.example.com
 ```
+
+
 ### .. group
+
 ```
 # ./ldap cn=SOME-GROUP
 cn: SOME-GROUP
@@ -42,34 +47,24 @@ member: CN=broadwell                OU=GeorgiaState    full DN: CN=broadwell,OU=
 ....
 member: CN=aladin                   OU=Lamp            full DN: CN=aladin,OU=lamp,OU=Unit,DC=ad,DC=example,DC=com
 ufn: SOME-GROUP, Department, Unit, Company, ad.example.com
-
 ```
 
 
-## compare members between two groups
-```
-# ./groupdiff groupA groupB
-groupA         groupB
-=============  =============
----            troyhunt
-aladin         aladin
-samspade       samspade
----            pnorton
----            mcaffeej
-```
+## analyse groups
 
-## compare _multiple_ groups
+Analyse a group or groups: who is in it, whose account has expired, how much overlap?
 ```
 # group-matrix group1 group2 group3...
-USERS     group1  group2  group3
-troyhunt  Y
-samspade  Y       Y       Y
-pnorton   Y
-mcaffeek  Y       Y
-gatesb    Y
+USERS  FULL_NAME         STATUS  group1  group2  group3
+user1  Randomuser, Sam   active          Y
+user2  Randomuser, Jay   EXPIRED Y       Y       Y
+user3  Randomuser, Beau  active  Y
+user4  Randomuser, Alex  active  Y       Y
 ```
 
+
 ## _recursively_ find ALL groups of a user ##
+
 This finds all groups of a user, including those that they are only indirectly a member of.
 ```
 # ./groupsof <username>
@@ -85,7 +80,7 @@ This finds all groups of a user, including those that they are only indirectly a
  CN=Team-Data                OU=Department      dn: CN=Team-Data,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
 ... <MANY groups omitted>
  CN=Team-Data-SecretProject  OU=Department      dn: CN=Team-Data-SecretProject,OU=Department,OU=Unit,DC=ad,DC=example,DC=com
- CN=Team-viztools            OU=Team            dn: CN=Team-viztools,OU=Team,OU=Unit,DC=ad,DC=example,DC=com
+ CN=Team-viztools            OU=Teams           dn: CN=Team-viztools,OU=Teams,OU=Unit,DC=ad,DC=example,DC=com
 ```
 
 # License and contribution

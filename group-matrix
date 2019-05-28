@@ -27,38 +27,38 @@
 
 # This script shows a membership matrix of all users in the queried groups
 
-USAGE="
-USAGE:   $0 AD_GROUP [AD_GROUP...]
-
-Prints a matrix showing which members are in which group, and if those accounts are expired or not.
-
-The script outputs pretty-printed tables if the output is the terminal
-If the output goes to a file or pipe, a standard CSV format is emitted instead
-
-Example terminal output:
-# ./group-matrix group1 group2 group3
-USERS  FULL_NAME         STATUS  group1  group2  group3
-user1  Randomuser, Sam   active  Y
-user2  Randomuser, Jay   EXPIRED Y       Y       Y
-user3  Randomuser, Beau  active,   Y
-user4  Randomuser, Alex  active  Y       Y
-
-Example redirected output:
-# ./group-matrix group1 group2 group3 | cat
-USERS,FULL_NAME,STATUS,group1,group2,group3
-user1,Randomuser, Sam,active,Y,,
-user2,Randomuser, Jay,EXPIRED,Y,Y,Y
-user3,Randomuser, Beau,active,Y,,
-user4,Randomuser, Alex,active,Y,Y,
-
-Please note that input groups are sorted and de-duplicated, so output column order
-will not necessarily match the order specified on the command line.
-"
-
 # check invocation
 if [ $# -lt 1 ]; then
   echo "Not enough arguments! (expected one or more AD-groups)"
-  echo "$USAGE"
+
+  # usage string: indented with tab instead of '  ' to deal with HEREDOC indenting rules
+  cat <<-EOS
+	USAGE:   $0 AD_GROUP [AD_GROUP...]
+
+	Prints a matrix showing which members are in which group, and if those accounts are expired or not.
+
+	The script outputs pretty-printed tables if the output is the terminal
+	If the output goes to a file or pipe, a properly-quoted CSV format is emitted instead
+
+	Example terminal output:
+	# ./group-matrix group1 group2 group3
+	USERS  FULL_NAME         STATUS  group1  group2  group3
+	user1  Randomuser, Sam   active          Y
+	user2  Randomuser, Jay   EXPIRED Y       Y       Y
+	user3  Randomuser, Beau  active  Y
+	user4  Randomuser, Alex  active  Y       Y
+
+	Example redirected output:
+	# ./group-matrix group1 group2 group3 | cat
+	USERS,"FULL_NAME",STATUS,group1,group2,group3
+	user1,"Randomuser, Sam",active,,Y,
+	user2,"Randomuser, Jay",EXPIRED,Y,Y,Y
+	user3,"Randomuser, Beau",active,Y,,
+	user4,"Randomuser, Alex",active,Y,Y,
+
+	Please note that input groups are sorted and de-duplicated, so output column order
+	will not necessarily match the order specified on the command line.
+	EOS
   exit 1
 fi
 
