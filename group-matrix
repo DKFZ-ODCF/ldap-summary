@@ -37,19 +37,19 @@ If the output goes to a file or pipe, a standard CSV format is emitted instead
 
 Example terminal output:
 # ./group-matrix group1 group2 group3
-USERS  STATUS  group1  group2  group3
-user1  active  Y
-user2  EXPIRED Y       Y       Y
-user3  active  Y
-user4  active  Y       Y
+USERS  FULL_NAME         STATUS  group1  group2  group3
+user1  Randomuser, Sam   active  Y
+user2  Randomuser, Jay   EXPIRED Y       Y       Y
+user3  Randomuser, Beau  active,   Y
+user4  Randomuser, Alex  active  Y       Y
 
 Example redirected output:
 # ./group-matrix group1 group2 group3 | cat
-USERS,STATUS,group1,group2,group3
-user1,active,Y,,
-user2,EXPIRED,Y,Y,Y
-user3,active,Y,,
-user4,active,Y,Y,
+USERS,FULL_NAME,STATUS,group1,group2,group3
+user1,Randomuser, Sam,active,Y,,
+user2,Randomuser, Jay,EXPIRED,Y,Y,Y
+user3,Randomuser, Beau,active,Y,,
+user4,Randomuser, Alex,active,Y,Y,
 
 Please note that input groups are sorted and de-duplicated, so output column order
 will not necessarily match the order specified on the command line.
@@ -157,23 +157,35 @@ ALL_USERS=( $(unique "${ALL_USERS[*]}") )
 AD_NOW=$(( ($(date '+%s') + 11644473600 ) * 10000000 ))
 
 ALL_USERS_UNIQ_WITH_STATUS="$TMPDIR/user-status.txt"
-echo "USERS${SEPARATOR}STATUS" > "$ALL_USERS_UNIQ_WITH_STATUS" # header
+echo "USER${SEPARATOR}FULL_NAME${SEPARATOR}STATUS" > "$ALL_USERS_UNIQ_WITH_STATUS" # header
 for U in ${ALL_USERS[*]}; do
-  expire_time=$(ldapsearch -u -LLL \
+  # single round-trip to ldap-server for all user-related info
+  ldap_answer=$(ldapsearch -u -LLL \
       -h "$JK_LDAPHOST" -w "$JK_LDAPPASSWORD" \
       -D "$JK_BINDDN" -b "$JK_SEARCHBASE" \
       -x \
-      cn="$U" accountExpires  \
+      cn="$U" accountExpires displayName \
     | sed -r -e 's/\r?\n //g' \
-    | grep '^accountExpires:' \
-    | sed 's/accountExpires: //'
+    | grep -e '^accountExpires:' -e '^displayName:'
   )
 
+  # extract and process expiry timestamp to determine account status
+  expire_time=$( grep '^accountExpires' <<< "$ldap_answer" | sed 's/accountExpires: //' )
+  status='active'
   if [ "$expire_time" -lt "$AD_NOW" ]; then
-    echo "${U}${SEPARATOR}EXPIRED" >> "$ALL_USERS_UNIQ_WITH_STATUS"
-  else
-    echo "${U}${SEPARATOR}active" >> "$ALL_USERS_UNIQ_WITH_STATUS"
+    status='EXPIRED'
   fi
+
+  # extract and process displayName
+  displayName=$( grep '^displayName' <<< "$ldap_answer" )
+  # displayName is base64 encoded when it contains non-ASCII
+  if [[ $displayName =~ :: ]]; then # '::' signals base64-encoded content
+    displayName=$( sed 's/displayName:: //' <<< "$displayName" | base64 -d )
+  else
+    displayName=$( sed 's/displayName: //' <<< "$displayName" )
+  fi
+
+  echo "${U}${SEPARATOR}${displayName}${SEPARATOR}${status}" >> "$ALL_USERS_UNIQ_WITH_STATUS"
 done
 
 
