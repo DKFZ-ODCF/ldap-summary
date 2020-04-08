@@ -42,7 +42,7 @@ ldapsearch -u -LLL \
   -h "$JK_LDAPHOST" -w "$JK_LDAPPASSWORD" \
   -D "$JK_BINDDN" -b "$JK_SEARCHBASE" \
   -x \
-  "($1)" cn displayName memberOf member description mail uidNumber gidNumber pwdLastSet lastLogonTimestamp accountExpires \
+  "($1)" cn displayName memberOf member description mail uidNumber gidNumber pwdLastSet lastLogonTimestamp accountExpires telephoneNumber \
   | sed -zr -e "s/\r?\n //g"  -e "s/\r?\n# refldap:.+\r?\n//g" \
   | awk --posix -F'( {2,}|,|:)' -- '
     function base_64_decode(encoded) {
